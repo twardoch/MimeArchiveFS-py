@@ -1,71 +1,65 @@
 # Contributing
 
-Contributions are welcome! Please follow these guidelines when contributing to this project.
+Thank you for considering contributing to `my_package`! We welcome all contributions, from bug reports and documentation improvements to new features.
 
-## Development Setup
+## Getting Started
 
-1.  **Clone the repository:**
+1.  **Familiarize yourself with the project:** Please read the main `README.md` file thoroughly. It contains:
+    *   An overview of the project and its goals.
+    *   Detailed instructions for setting up your development environment (using Hatch, uv, pre-commit, etc.).
+    *   Guidance on running linters, formatters, type checkers, and tests.
+    *   Information about our versioning and release process.
+    *   An explanation of the codebase structure.
+
+2.  **Find an issue or suggest an idea:** Check the issue tracker on GitHub for existing bugs, feature requests, or discussions. If you have a new idea or want to work on something not listed, please open an issue first to discuss it with the maintainers.
+
+## Contribution Workflow
+
+1.  **Fork the repository** on GitHub.
+2.  **Clone your fork** locally:
     ```bash
-    git clone https://github.com/your-username/my_package.git
+    git clone https://github.com/YOUR_USERNAME/my_package.git # TODO: Update this URL
     cd my_package
     ```
-
-2.  **Create a virtual environment:**
+3.  **Set up your development environment** by following the instructions in the "For Developers" section of `README.md`. This includes installing Hatch, creating the environment with `hatch env create`, and installing pre-commit hooks with `pre-commit install`.
+4.  **Create a new branch** for your changes:
     ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    git checkout -b your-descriptive-branch-name
     ```
-
-3.  **Install dependencies:**
+5.  **Make your changes.** Ensure you write clean, well-documented, and well-tested code.
+6.  **Run all quality checks** as described in the `README.md` (e.g., `hatch run lint:style`, `hatch run test`). Pre-commit hooks will help, but a full manual check is also recommended.
+7.  **Commit your changes** with clear and concise commit messages. Consider following conventional commit formats if you are familiar with them.
     ```bash
-    pip install -e .[dev]
+    git commit -m "feat: Add new feature X" -m "Detailed description of changes."
     ```
-
-## Running Tests
-
-To run the tests, use pytest:
-```bash
-pytest
-```
-
-## Code Style
-
-This project uses Black for code formatting and Flake8 for linting.
-
-*   **Format code:**
+8.  **Push your branch** to your fork:
     ```bash
-    black .
+    git push origin your-descriptive-branch-name
     ```
-*   **Lint code:**
-    ```bash
-    flake8 .
-    ```
-
-## Submitting Changes
-
-1.  Create a new branch for your feature or bug fix:
-    ```bash
-    git checkout -b my-feature-branch
-    ```
-2.  Make your changes and commit them with a clear and concise message.
-3.  Push your branch to your fork:
-    ```bash
-    git push origin my-feature-branch
-    ```
-4.  Open a pull request against the `main` branch of the original repository.
+9.  **Open a Pull Request (PR)** against the `main` branch of the original `my_package` repository.
+    *   Provide a clear title and description for your PR.
+    *   Link to any relevant issues.
+    *   Explain your changes and why they are needed.
 
 ## Code of Conduct
 
-Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms. (TODO: Add a Code of Conduct file)
+This project and everyone participating in it is governed by a Code of Conduct. (TODO: Create and link to a `CODE_OF_CONDUCT.md` file if one is desired. If not, this section can be removed or rephrased). By participating, you are expected to uphold this code. Please report unacceptable behavior.
 
 ## Reporting Bugs
 
-If you find a bug, please open an issue on GitHub and provide as much detail as possible, including:
+If you encounter a bug, please open an issue on GitHub. Include:
+*   A clear and descriptive title.
 *   Steps to reproduce the bug.
-*   Expected behavior.
-*   Actual behavior.
-*   Your environment (Python version, OS, etc.).
+*   What you expected to happen.
+*   What actually happened (including any error messages or tracebacks).
+*   Your environment (e.g., Python version, OS, `my_package` version, Hatch version).
 
 ## Suggesting Enhancements
 
-If you have an idea for an enhancement, please open an issue on GitHub to discuss it.
+If you have an idea for an enhancement, please open an issue on GitHub. Provide:
+*   A clear and descriptive title.
+*   A detailed explanation of the proposed enhancement.
+*   The motivation or use case for this enhancement.
+*   Any potential drawbacks or alternative solutions.
+
+We appreciate your contributions to making `my_package` better!
