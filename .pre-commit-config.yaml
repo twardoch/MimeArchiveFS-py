@@ -45,6 +45,10 @@ repos:
         language: system
         types: [python]
         pass_filenames: false # Mypy typically runs on configured paths, not individual files
+                              # NOTE: This hook runs mypy on all configured files, not just changed ones.
+                              # This may slow down pre-commit on large projects.
+                              # If performance is a concern, consider running mypy manually or
+                              # using a custom script to limit checks to changed files.
         # Ensure mypy is configured in pyproject.toml to check relevant paths
         # Exclude files if necessary, e.g. files in .venv
         # exclude: ^\.venv/
