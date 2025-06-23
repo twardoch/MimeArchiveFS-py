@@ -1,0 +1,307 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+#
+# To use:
+# 1. Install pre-commit: pip install pre-commit (or it's included in dev dependencies via Hatch)
+# 2. Install hooks: pre-commit install
+# 3. Run against all files: pre-commit run --all-files
+
+# Default minimum version of pre-commit.
+minimum_pre_commit_version: '2.20.0'
+
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0 # Choose a specific version
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-json
+    -   id: check-toml
+    -   id: check-added-large-files
+    -   id: debug-statements
+    -   id: detect-private-key
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version. Must be fixed to a specific version to avoid formatting changes
+    # when ruff updates externally.
+    rev: 'v0.1.9' # Replace with the specific version of Ruff you are using or want to pin
+    hooks:
+    -   id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        # types_or: [python, pyi, jupyter] # If using Jupyter notebooks
+    -   id: ruff-format
+        # types_or: [python, pyi, jupyter] # If using Jupyter notebooks
+
+# Mypy hook needs to run in an environment with all dependencies.
+# Using a local hook that leverages Hatch is more reliable here.
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: hatch run lint:check # This runs mypy and ruff, we only want mypy here
+                                  # A dedicated hatch script for mypy might be better.
+                                  # For now, let's make a more specific hatch command for mypy
+        language: system
+        types: [python]
+        pass_filenames: false # Mypy typically runs on configured paths, not individual files
+        # Ensure mypy is configured in pyproject.toml to check relevant paths
+        # Exclude files if necessary, e.g. files in .venv
+        # exclude: ^\.venv/
+
+# Let's refine the mypy hook. It's better to have a dedicated Hatch script.
+# I will update pyproject.toml to add a specific mypy script in the lint env.
+# Then, update this file once pyproject.toml is modified.
+
+# For now, I'll proceed with this structure and refine the mypy hook command after
+# updating pyproject.toml in the next step.
+# The pre-commit framework will ensure Ruff and Mypy (via Hatch) are run.
+# Ruff is configured in pyproject.toml.
+# Mypy is configured in pyproject.toml.
+# The `entry` for mypy will be adjusted.
+# The Ruff version in `rev` should match the one used in `pyproject.toml` if possible,
+# or be a specific known good version. I've put v0.1.9 as an example.
+# You'll need to install these hooks with `pre-commit install`.
+# And ensure dependencies are available for the mypy hook (via Hatch).
+#
+# Consider adding other hooks like:
+# - codespell: for checking spelling
+# - commitizen: for conventional commits (if desired)
+# - pyright: as an alternative or supplement to mypy (though mypy is requested)
+#
+# Note on Mypy hook:
+# Running mypy through `hatch run ...` in pre-commit is good because it uses the
+# project's defined environment.
+# The `pass_filenames: false` is typical for mypy as it usually checks configured paths.
+# If you want mypy to check only committed files, the setup is more complex and might
+# require `pre-commit-mypy` from `github.com/pre-commit/mirrors-mypy`
+# but that runs mypy in its own isolated environment, which might not have all project
+# specific dependencies or stubs for them.
+# The current approach assumes mypy checks the whole configured project subset.
+#
+# I will adjust the mypy entry point after modifying pyproject.toml.
+# For now, the structure of the pre-commit config is laid out.
+# The ruff version 'v0.1.9' is a placeholder; it's better to align this with the
+# version of ruff specified in your pyproject.toml if you add it as a direct dependency there,
+# or simply use a recent stable version if ruff is only used via pre-commit.
+# Since ruff is in pyproject.toml's dev dependencies, this pre-commit hook will use that version
+# if `language: system` is used for the ruff hook, or if the versions align.
+# The astral-sh/ruff-pre-commit hook installs its own ruff.
+#
+# Let's adjust the ruff hook to use the project's ruff if possible, or ensure versions match.
+# The astral-sh hook is the recommended way.
+# I will also update the mypy hook to use a more specific hatch script.
+# This will be done in a subsequent step.
+#
+# For now, this is the initial setup.
+# The Ruff pre-commit hook `astral-sh/ruff-pre-commit` is the standard.
+# It will install its own ruff version specified by `rev`.
+# It's good to keep this `rev` in sync with any `ruff` version in your `pyproject.toml`
+# if you also run ruff outside of pre-commit using the project environment.
+# The `ruff` version in `dev` dependencies is `ruff`. The pre-commit `rev` for ruff should be a specific tag.
+# I'll use a recent ruff version for `rev`.
+#
+# The mypy hook needs refinement.
+# I'll first add a specific mypy script to pyproject.toml.
+# For now, the file is created with a placeholder for the mypy entry.
+# I'll update it shortly.
+#
+# Let's set a specific ruff version, e.g., v0.1.9 for now.
+# The actual ruff version from pyproject.toml will be used by hatch commands.
+# The pre-commit hook for ruff will use the version specified in `rev`. It's best to align them.
+# I will assume ruff version in pyproject.toml is also ~0.1.9 for consistency.
+# If not, this might lead to slight differences if ruff is run via hatch vs pre-commit.
+#
+# Finalizing the initial .pre-commit-config.yaml structure.
+# The Mypy hook needs a dedicated hatch script. I will add that next.
+# For now, I'll write the file.
+#
+# I'll update the mypy entry to be more specific after the next step, which is to update pyproject.toml.
+# For now, the structure is:
+# repos:
+# -   repo: https://github.com/pre-commit/pre-commit-hooks
+#     rev: v4.5.0
+#     hooks:
+#     -   id: trailing-whitespace
+#     # ... other standard hooks
+# -   repo: https://github.com/astral-sh/ruff-pre-commit
+#     rev: 'v0.1.9' # Use a specific ruff version
+#     hooks:
+#     -   id: ruff
+#         args: [--fix, --exit-non-zero-on-fix]
+#     -   id: ruff-format
+# -   repo: local
+#     hooks:
+#     -   id: mypy
+#         name: mypy
+#         entry: <placeholder_hatch_mypy_script>
+#         language: system
+#         types: [python]
+#         pass_filenames: false
+#
+# This is the content I will write to the file for now.
+# The placeholder will be updated.
+#
+# The Ruff version `v0.1.9` is just an example. It's better to check the latest stable ruff version.
+# As of late 2023 / early 2024, ruff versions are more like v0.1.x or v0.2.x.
+# Let's pick a more recent one as a placeholder, e.g. v0.2.2
+#
+# The plan is:
+# 1. Create .pre-commit-config.yaml with a placeholder for mypy.
+# 2. Update pyproject.toml to add a specific hatch script for mypy.
+# 3. Update .pre-commit-config.yaml to use the new hatch script.
+# 4. Update documentation.
+#
+# This tool call is step 1.
+#
+# I will use ruff rev v0.2.2 as a more current example.
+#
+# The 'entry' for mypy will be `hatch run lint:mypy` after I add this script to pyproject.toml.
+#
+# The file content for `.pre-commit-config.yaml`:
+# ```yaml
+# minimum_pre_commit_version: '2.20.0'
+# repos:
+# -   repo: https://github.com/pre-commit/pre-commit-hooks
+#     rev: v4.5.0
+#     hooks:
+#     -   id: trailing-whitespace
+#     -   id: end-of-file-fixer
+#     -   id: check-yaml
+#     -   id: check-json
+#     -   id: check-toml
+#     -   id: check-added-large-files
+#     -   id: debug-statements
+#     -   id: detect-private-key
+# -   repo: https://github.com/astral-sh/ruff-pre-commit
+#     rev: 'v0.2.2' # Use a recent Ruff version
+#     hooks:
+#     -   id: ruff
+#         name: ruff-lint
+#         args: [--fix, --exit-non-zero-on-fix]
+#     -   id: ruff-format
+#         name: ruff-format
+# -   repo: local
+#     hooks:
+#     -   id: mypy
+#         name: mypy
+#         entry: hatch run lint:mypy # This script will be added to pyproject.toml
+#         language: system
+#         types: [python]
+#         pass_filenames: false
+#         require_serial: true # Mypy often needs to run serially
+# ```
+# This looks like a good setup.
+# I will now create this file.
+# The `require_serial: true` for mypy is a good addition.
+# I've also given explicit names to the ruff hooks for clarity in output.
+#
+# The Ruff pre-commit hook `astral-sh/ruff-pre-commit` uses the Ruff version specified in `rev`.
+# If you want it to use the Ruff version from your project's virtual environment (managed by Hatch),
+# you'd need a local hook definition for Ruff as well, similar to Mypy.
+# However, the `astral-sh/ruff-pre-commit` is optimized and generally recommended.
+# It's usually fine if the pre-commit Ruff version is slightly different from the one you use for
+# manual checks, as long as they are close and produce compatible results.
+# For strict consistency, pin both to the exact same version.
+#
+# Let's ensure the `ruff` version in `pyproject.toml` (dev dependency) is a specific version
+# rather than just "ruff" to maintain this consistency. This will be done when I
+# update `pyproject.toml` for the mypy script.
+#
+# Creating the file now with the defined content.
+# The `entry: hatch run lint:mypy` assumes `lint:mypy` will be a valid hatch script.
+# I will add this script to `pyproject.toml` in the next tool call.
+#
+# Final check of the content before creating:
+# Yes, this looks good.
+#
+# I'll also add `check-merge-conflict` from pre-commit-hooks.
+#
+# ```yaml
+# minimum_pre_commit_version: '2.20.0'
+# default_language_version:
+#     python: python3 # ensures hooks use python3
+#
+# repos:
+# -   repo: https://github.com/pre-commit/pre-commit-hooks
+#     rev: v4.5.0
+#     hooks:
+#     -   id: trailing-whitespace
+#     -   id: end-of-file-fixer
+#     -   id: check-yaml
+#     -   id: check-json
+#     -   id: check-toml
+#     -   id: check-merge-conflict
+#     -   id: check-added-large-files
+#     -   id: debug-statements
+#     -   id: detect-private-key
+#
+# -   repo: https://github.com/astral-sh/ruff-pre-commit
+#     rev: 'v0.2.2' # Use a recent, specific Ruff version. Align with pyproject.toml if possible.
+#     hooks:
+#     -   id: ruff
+#         name: ruff-lint
+#         args: [--fix, --exit-non-zero-on-fix]
+#         # Consider excluding files if necessary, e.g. files in .venv
+#         # exclude: ^\.venv/
+#     -   id: ruff-format
+#         name: ruff-format
+#         # exclude: ^\.venv/
+#
+# -   repo: local
+#     hooks:
+#     -   id: mypy
+#         name: mypy
+#         entry: hatch run lint:mypy # This script will be added to pyproject.toml's [tool.hatch.envs.lint.scripts]
+#         language: system
+#         'types_or': [python, pyi] # Check .py and .pyi files
+#         pass_filenames: false # Mypy typically runs on configured paths
+#         require_serial: true # Mypy often needs to run serially
+#         # exclude: ^\.venv/
+# ```
+# Added `default_language_version` for python hooks.
+# Added `check-merge-conflict`.
+# Changed `types: [python]` to `types_or: [python, pyi]` for mypy.
+# Added comments about excluding .venv if necessary (though pre-commit usually handles this well by default for staged files).
+# This looks solid.```yaml
+minimum_pre_commit_version: '2.20.0'
+default_language_version:
+    python: python3 # ensures hooks use python3
+
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-json
+    -   id: check-toml
+    -   id: check-merge-conflict
+    -   id: check-added-large-files
+    -   id: debug-statements
+    -   id: detect-private-key
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 'v0.2.2' # Use a recent, specific Ruff version. Align with pyproject.toml if possible.
+    hooks:
+    -   id: ruff
+        name: ruff-lint
+        args: [--fix, --exit-non-zero-on-fix]
+        # Consider excluding files if necessary, e.g. files in .venv
+        # exclude: ^\.venv/
+    -   id: ruff-format
+        name: ruff-format
+        # exclude: ^\.venv/
+
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: hatch run lint:mypy # This script will be added to pyproject.toml's [tool.hatch.envs.lint.scripts]
+        language: system
+        'types_or': [python, pyi] # Check .py and .pyi files
+        pass_filenames: false # Mypy typically runs on configured paths
+        require_serial: true # Mypy often needs to run serially
+        # exclude: ^\.venv/
+```
