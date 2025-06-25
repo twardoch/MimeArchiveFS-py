@@ -46,7 +46,7 @@ To set up `my_package` for development:
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/my_package.git # TODO: Update this URL
+    git clone https://github.com/example-org/example-repo.git
     cd my_package
     ```
 

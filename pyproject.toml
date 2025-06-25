@@ -27,9 +27,9 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/your-username/my_package" # TODO: Update this URL
-"Bug Tracker" = "https://github.com/your-username/my_package/issues" # TODO: Update this URL
-"Repository" = "https://github.com/your-username/my_package" # TODO: Update this URL
+"Homepage" = "https://github.com/example-org/example-repo"
+"Bug Tracker" = "https://github.com/example-org/example-repo/issues"
+"Repository" = "https://github.com/example-org/example-repo"
 
 [project.optional-dependencies]
 dev = [
@@ -63,6 +63,7 @@ dependencies = [
   "pytest-cov",
   "mypy", # Mypy needed for tests if type checking is part of default checks
   "ruff", # Ruff needed for linting/formatting if part of default checks
+  "hatch-vcs", # Added for dynamic versioning
 ]
 scripts = { test = "pytest --cov=src/my_package --cov-report=html --cov-report=xml --cov-fail-under=90 tests/" }
 
