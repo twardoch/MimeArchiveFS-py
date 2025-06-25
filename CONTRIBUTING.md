@@ -18,8 +18,8 @@ Thank you for considering contributing to `my_package`! We welcome all contribut
 1.  **Fork the repository** on GitHub.
 2.  **Clone your fork** locally:
     ```bash
-    git clone https://github.com/YOUR_USERNAME/my_package.git # TODO: Update this URL
-    cd my_package
+    git clone https://github.com/YOUR_USERNAME/example-repo.git # Replace YOUR_USERNAME with your GitHub username
+    cd example-repo # Or your chosen directory name
     ```
 3.  **Set up your development environment** by following the instructions in the "For Developers" section of `README.md`. This includes installing Hatch, creating the environment with `hatch env create`, and installing pre-commit hooks with `pre-commit install`.
 4.  **Create a new branch** for your changes:
@@ -43,7 +43,7 @@ Thank you for considering contributing to `my_package`! We welcome all contribut
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by a Code of Conduct. (TODO: Create and link to a `CODE_OF_CONDUCT.md` file if one is desired. If not, this section can be removed or rephrased). By participating, you are expected to uphold this code. Please report unacceptable behavior.
+This project and everyone participating in it is governed by a Code of Conduct. (Note: If you adopt this project, please create a `CODE_OF_CONDUCT.md` file and link to it here, or remove/rephrase this section as appropriate.) By participating, you are expected to uphold this code. Please report unacceptable behavior.
 
 ## Reporting Bugs
 
