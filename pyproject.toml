@@ -73,23 +73,21 @@ dependencies = [
   "ruff",
   "mypy",
 ]
-scripts = {
-  check = [
-    "ruff check .",
-    "mypy src/my_package/ tests/",
-  ],
-  fmt = [
-    "ruff format .",
-    "ruff check . --fix", # Apply auto-fixes
-  ],
-  style = [ # Comprehensive check and fix
-    "ruff format .",
-    "ruff check . --fix",
-    "mypy src/my_package/ tests/",
-  ],
-  # Specific script for pre-commit mypy hook
-  mypy = "mypy src/my_package/ tests/"
-}
+
+[tool.hatch.envs.lint.scripts]
+check = [
+  "ruff check .",
+  "mypy src/my_package/ tests/",
+]
+fmt = [
+  "ruff format .",
+  "ruff check . --fix", # Apply auto-fixes
+]
+style = [ # Comprehensive check and fix
+  "ruff format .",
+  "ruff check . --fix",
+  "mypy src/my_package/ tests/",
+]
 
 [tool.ruff]
 line-length = 88

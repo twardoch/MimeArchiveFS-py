@@ -1,6 +1,6 @@
 import pytest
 
-from my_package.main import hello, add
+from my_package.main import add, hello
 
 
 @pytest.mark.parametrize(
@@ -10,7 +10,7 @@ from my_package.main import hello, add
         ("Jules", "Hello, Jules!"),
         ("", "Hello, !"),
         (" ", "Hello,  !"),
-        ("123", "Hello, 123!"), # Test with a string number
+        ("123", "Hello, 123!"),  # Test with a string number
         # Note: hello() takes `name: str`. Non-str inputs might be relevant
         # if type checking isn't strictly enforced at runtime by other means,
         # but f-strings will call str() on them.

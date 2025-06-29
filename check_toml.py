@@ -1,5 +1,6 @@
-import tomllib
 import sys
+
+import tomllib
 
 try:
     with open("pyproject.toml", "rb") as f:
