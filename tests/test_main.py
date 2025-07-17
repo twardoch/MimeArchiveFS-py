@@ -43,3 +43,31 @@ def test_add_type_error():
         add("a", "b")  # type: ignore
     with pytest.raises(TypeError):
         add(1, "b")  # type: ignore
+    with pytest.raises(TypeError):
+        add(1.5, 2)  # type: ignore
+    with pytest.raises(TypeError):
+        add(None, 2)  # type: ignore
+    with pytest.raises(TypeError):
+        add([], 2)  # type: ignore
+
+
+def test_hello_edge_cases():
+    """Test hello function with edge cases."""
+    # Test with special characters
+    assert hello("@#$%") == "Hello, @#$%!"
+    # Test with unicode
+    assert hello("世界") == "Hello, 世界!"
+    # Test with newlines
+    assert hello("Line1\nLine2") == "Hello, Line1\nLine2!"
+
+
+def test_add_edge_cases():
+    """Test add function with edge cases."""
+    # Test with large numbers
+    assert add(999999999, 1) == 1000000000
+    # Test with negative numbers
+    assert add(-999999999, -1) == -1000000000
+    # Test with zero
+    assert add(0, 0) == 0
+    assert add(0, 1) == 1
+    assert add(1, 0) == 1
