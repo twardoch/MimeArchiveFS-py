@@ -1,0 +1,63 @@
+name: Python CI & QA
+
+on: [push, pull_request]
+
+jobs:
+  quality_assurance:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+      fail-fast: false # Allow other jobs to continue if one fails
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Required for hatch-vcs to determine version
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Hatch and uv
+      run: |
+        pip install pipx
+        pipx install hatch
+        pipx install uv
+        pipx ensurepath
+        echo "$HOME/.local/bin" >> $GITHUB_PATH # Add pipx bin to PATH
+
+    - name: Configure Hatch to use uv
+      run: hatch config set dirs.env.virtual.uv $(command -v uv)
+
+    - name: View Hatch version and config
+      run: |
+        hatch --version
+        hatch config show
+        hatch env show --json
+
+    - name: Run Linting and Type Checking (only on one Python version)
+      if: matrix.python-version == '3.10' # Or your project's primary Python version
+      run: |
+        hatch run lint:check
+      # The 'lint:style' script could also be used if auto-formatting checks are desired in CI
+      # hatch run lint:style
+
+    - name: Run Tests
+      run: |
+        hatch run default:test # 'default' is the environment name, 'test' is the script key
+        # If you have matrix environments in hatch for different pythons:
+        # hatch run py${{ matrix.python-version }}:test
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }} # Optional: if you have a private repo
+        files: ./coverage.xml # Path defined in hatch script for pytest
+        # The default pytest script in pyproject.toml is:
+        # "pytest --cov=src/my_package --cov-report=html --cov-report=xml --cov-fail-under=90 tests/"
+        # This generates coverage.xml in the root.
+        fail_ci_if_error: true
+        verbose: true

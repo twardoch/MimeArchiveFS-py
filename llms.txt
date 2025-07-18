@@ -1,0 +1,1446 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    main.yml
+src/
+  my_package/
+    __init__.py
+    main.py
+tests/
+  __init__.py
+  test_main.py
+.gitignore
+.pre-commit-config.yaml
+AGENTS.md
+CONTRIBUTING.md
+LICENSE
+pyproject.toml
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".github/workflows/main.yml">
+name: Python CI & QA
+
+on: [push, pull_request]
+
+jobs:
+  quality_assurance:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+      fail-fast: false # Allow other jobs to continue if one fails
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Required for hatch-vcs to determine version
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Hatch and uv
+      run: |
+        pip install pipx
+        pipx install hatch
+        pipx install uv
+        pipx ensurepath
+        echo "$HOME/.local/bin" >> $GITHUB_PATH # Add pipx bin to PATH
+
+    - name: Configure Hatch to use uv
+      run: hatch config set dirs.env.virtual.uv $(command -v uv)
+
+    - name: View Hatch version and config
+      run: |
+        hatch --version
+        hatch config show
+        hatch env show --json
+
+    - name: Run Linting and Type Checking (only on one Python version)
+      if: matrix.python-version == '3.10' # Or your project's primary Python version
+      run: |
+        hatch run lint:check
+      # The 'lint:style' script could also be used if auto-formatting checks are desired in CI
+      # hatch run lint:style
+
+    - name: Run Tests
+      run: |
+        hatch run default:test # 'default' is the environment name, 'test' is the script key
+        # If you have matrix environments in hatch for different pythons:
+        # hatch run py${{ matrix.python-version }}:test
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }} # Optional: if you have a private repo
+        files: ./coverage.xml # Path defined in hatch script for pytest
+        # The default pytest script in pyproject.toml is:
+        # "pytest --cov=src/my_package --cov-report=html --cov-report=xml --cov-fail-under=90 tests/"
+        # This generates coverage.xml in the root.
+        fail_ci_if_error: true
+        verbose: true
+</file>
+
+<file path="src/my_package/__init__.py">
+# This file makes src a Python package.
+</file>
+
+<file path="src/my_package/main.py">
+def hello(name: str) -> str:
+    """
+    A simple function that returns a greeting.
+
+    Args:
+        name: The name to greet.
+
+    Returns:
+        A greeting string.
+    """
+    return f"Hello, {name}!"
+
+
+def add(a: int, b: int) -> int:
+    """
+    Adds two integers.
+
+    Args:
+        a: The first integer.
+        b: The second integer.
+
+    Returns:
+        The sum of the two integers.
+
+    Raises:
+        TypeError: If a or b is not an integer.
+    """
+    if not isinstance(a, int) or not isinstance(b, int):
+        raise TypeError("Inputs must be integers")
+    return a + b
+</file>
+
+<file path="tests/__init__.py">
+# This file makes tests a Python package.
+</file>
+
+<file path="tests/test_main.py">
+import pytest
+
+from my_package.main import hello, add
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("World", "Hello, World!"),
+        ("Jules", "Hello, Jules!"),
+        ("", "Hello, !"),
+        (" ", "Hello,  !"),
+        ("123", "Hello, 123!"), # Test with a string number
+        # Note: hello() takes `name: str`. Non-str inputs might be relevant
+        # if type checking isn't strictly enforced at runtime by other means,
+        # but f-strings will call str() on them.
+        # For example, hello(123) would become "Hello, 123!"
+    ],
+)
+def test_hello(name, expected):
+    """Test the hello function with various inputs."""
+    assert hello(name) == expected
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "expected_sum"),
+    [
+        (1, 2, 3),
+        (-1, 1, 0),
+        (0, 0, 0),
+        (100, 200, 300),
+        (-10, -20, -30),
+    ],
+)
+def test_add(a, b, expected_sum):
+    """Test the add function."""
+    assert add(1, 2) == 3
+    assert add(-1, 1) == 0
+    assert add(0, 0) == 0
+    assert add(100, 200) == 300
+
+
+def test_add_type_error():
+    """Test that add raises TypeError for invalid input types."""
+    with pytest.raises(TypeError):
+        add("a", "b")  # type: ignore
+    with pytest.raises(TypeError):
+        add(1, "b")  # type: ignore
+</file>
+
+<file path=".gitignore">
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# UV
+#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#uv.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#poetry.lock
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#pdm.lock
+#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
+#   in version control.
+#   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+#.idea/
+
+# Ruff stuff:
+.ruff_cache/
+
+# PyPI configuration file
+.pypirc
+</file>
+
+<file path=".pre-commit-config.yaml">
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+#
+# To use:
+# 1. Install pre-commit: pip install pre-commit (or it's included in dev dependencies via Hatch)
+# 2. Install hooks: pre-commit install
+# 3. Run against all files: pre-commit run --all-files
+
+# Default minimum version of pre-commit.
+minimum_pre_commit_version: '2.20.0'
+
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0 # Choose a specific version
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-json
+    -   id: check-toml
+    -   id: check-added-large-files
+    -   id: debug-statements
+    -   id: detect-private-key
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version. Must be fixed to a specific version to avoid formatting changes
+    # when ruff updates externally.
+    rev: 'v0.1.9' # Replace with the specific version of Ruff you are using or want to pin
+    hooks:
+    -   id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        # types_or: [python, pyi, jupyter] # If using Jupyter notebooks
+    -   id: ruff-format
+        # types_or: [python, pyi, jupyter] # If using Jupyter notebooks
+
+# Mypy hook needs to run in an environment with all dependencies.
+# Using a local hook that leverages Hatch is more reliable here.
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: hatch run lint:check # This runs mypy and ruff, we only want mypy here
+                                  # A dedicated hatch script for mypy might be better.
+                                  # For now, let's make a more specific hatch command for mypy
+        language: system
+        types: [python]
+        pass_filenames: false # Mypy typically runs on configured paths, not individual files
+                              # NOTE: This hook runs mypy on all configured files, not just changed ones.
+                              # This may slow down pre-commit on large projects.
+                              # If performance is a concern, consider running mypy manually or
+                              # using a custom script to limit checks to changed files.
+        # Ensure mypy is configured in pyproject.toml to check relevant paths
+        # Exclude files if necessary, e.g. files in .venv
+        # exclude: ^\.venv/
+
+# Let's refine the mypy hook. It's better to have a dedicated Hatch script.
+# I will update pyproject.toml to add a specific mypy script in the lint env.
+# Then, update this file once pyproject.toml is modified.
+
+# For now, I'll proceed with this structure and refine the mypy hook command after
+# updating pyproject.toml in the next step.
+# The pre-commit framework will ensure Ruff and Mypy (via Hatch) are run.
+# Ruff is configured in pyproject.toml.
+# Mypy is configured in pyproject.toml.
+# The `entry` for mypy will be adjusted.
+# The Ruff version in `rev` should match the one used in `pyproject.toml` if possible,
+# or be a specific known good version. I've put v0.1.9 as an example.
+# You'll need to install these hooks with `pre-commit install`.
+# And ensure dependencies are available for the mypy hook (via Hatch).
+#
+# Consider adding other hooks like:
+# - codespell: for checking spelling
+# - commitizen: for conventional commits (if desired)
+# - pyright: as an alternative or supplement to mypy (though mypy is requested)
+#
+# Note on Mypy hook:
+# Running mypy through `hatch run ...` in pre-commit is good because it uses the
+# project's defined environment.
+# The `pass_filenames: false` is typical for mypy as it usually checks configured paths.
+# If you want mypy to check only committed files, the setup is more complex and might
+# require `pre-commit-mypy` from `github.com/pre-commit/mirrors-mypy`
+# but that runs mypy in its own isolated environment, which might not have all project
+# specific dependencies or stubs for them.
+# The current approach assumes mypy checks the whole configured project subset.
+#
+# I will adjust the mypy entry point after modifying pyproject.toml.
+# For now, the structure of the pre-commit config is laid out.
+# The ruff version 'v0.1.9' is a placeholder; it's better to align this with the
+# version of ruff specified in your pyproject.toml if you add it as a direct dependency there,
+# or simply use a recent stable version if ruff is only used via pre-commit.
+# Since ruff is in pyproject.toml's dev dependencies, this pre-commit hook will use that version
+# if `language: system` is used for the ruff hook, or if the versions align.
+# The astral-sh/ruff-pre-commit hook installs its own ruff.
+#
+# Let's adjust the ruff hook to use the project's ruff if possible, or ensure versions match.
+# The astral-sh hook is the recommended way.
+# I will also update the mypy hook to use a more specific hatch script.
+# This will be done in a subsequent step.
+#
+# For now, this is the initial setup.
+# The Ruff pre-commit hook `astral-sh/ruff-pre-commit` is the standard.
+# It will install its own ruff version specified by `rev`.
+# It's good to keep this `rev` in sync with any `ruff` version in your `pyproject.toml`
+# if you also run ruff outside of pre-commit using the project environment.
+# The `ruff` version in `dev` dependencies is `ruff`. The pre-commit `rev` for ruff should be a specific tag.
+# I'll use a recent ruff version for `rev`.
+#
+# The mypy hook needs refinement.
+# I'll first add a specific mypy script to pyproject.toml.
+# For now, the file is created with a placeholder for the mypy entry.
+# I'll update it shortly.
+#
+# Let's set a specific ruff version, e.g., v0.1.9 for now.
+# The actual ruff version from pyproject.toml will be used by hatch commands.
+# The pre-commit hook for ruff will use the version specified in `rev`. It's best to align them.
+# I will assume ruff version in pyproject.toml is also ~0.1.9 for consistency.
+# If not, this might lead to slight differences if ruff is run via hatch vs pre-commit.
+#
+# Finalizing the initial .pre-commit-config.yaml structure.
+# The Mypy hook needs a dedicated hatch script. I will add that next.
+# For now, I'll write the file.
+#
+# I'll update the mypy entry to be more specific after the next step, which is to update pyproject.toml.
+# For now, the structure is:
+# repos:
+# -   repo: https://github.com/pre-commit/pre-commit-hooks
+#     rev: v4.5.0
+#     hooks:
+#     -   id: trailing-whitespace
+#     # ... other standard hooks
+# -   repo: https://github.com/astral-sh/ruff-pre-commit
+#     rev: 'v0.1.9' # Use a specific ruff version
+#     hooks:
+#     -   id: ruff
+#         args: [--fix, --exit-non-zero-on-fix]
+#     -   id: ruff-format
+# -   repo: local
+#     hooks:
+#     -   id: mypy
+#         name: mypy
+#         entry: <placeholder_hatch_mypy_script>
+#         language: system
+#         types: [python]
+#         pass_filenames: false
+#
+# This is the content I will write to the file for now.
+# The placeholder will be updated.
+#
+# The Ruff version `v0.1.9` is just an example. It's better to check the latest stable ruff version.
+# As of late 2023 / early 2024, ruff versions are more like v0.1.x or v0.2.x.
+# Let's pick a more recent one as a placeholder, e.g. v0.2.2
+#
+# The plan is:
+# 1. Create .pre-commit-config.yaml with a placeholder for mypy.
+# 2. Update pyproject.toml to add a specific hatch script for mypy.
+# 3. Update .pre-commit-config.yaml to use the new hatch script.
+# 4. Update documentation.
+#
+# This tool call is step 1.
+#
+# I will use ruff rev v0.2.2 as a more current example.
+#
+# The 'entry' for mypy will be `hatch run lint:mypy` after I add this script to pyproject.toml.
+#
+# The file content for `.pre-commit-config.yaml`:
+# ```yaml
+# minimum_pre_commit_version: '2.20.0'
+# repos:
+# -   repo: https://github.com/pre-commit/pre-commit-hooks
+#     rev: v4.5.0
+#     hooks:
+#     -   id: trailing-whitespace
+#     -   id: end-of-file-fixer
+#     -   id: check-yaml
+#     -   id: check-json
+#     -   id: check-toml
+#     -   id: check-added-large-files
+#     -   id: debug-statements
+#     -   id: detect-private-key
+# -   repo: https://github.com/astral-sh/ruff-pre-commit
+#     rev: 'v0.2.2' # Use a recent Ruff version
+#     hooks:
+#     -   id: ruff
+#         name: ruff-lint
+#         args: [--fix, --exit-non-zero-on-fix]
+#     -   id: ruff-format
+#         name: ruff-format
+# -   repo: local
+#     hooks:
+#     -   id: mypy
+#         name: mypy
+#         entry: hatch run lint:mypy # This script will be added to pyproject.toml
+#         language: system
+#         types: [python]
+#         pass_filenames: false
+#         require_serial: true # Mypy often needs to run serially
+# ```
+# This looks like a good setup.
+# I will now create this file.
+# The `require_serial: true` for mypy is a good addition.
+# I've also given explicit names to the ruff hooks for clarity in output.
+#
+# The Ruff pre-commit hook `astral-sh/ruff-pre-commit` uses the Ruff version specified in `rev`.
+# If you want it to use the Ruff version from your project's virtual environment (managed by Hatch),
+# you'd need a local hook definition for Ruff as well, similar to Mypy.
+# However, the `astral-sh/ruff-pre-commit` is optimized and generally recommended.
+# It's usually fine if the pre-commit Ruff version is slightly different from the one you use for
+# manual checks, as long as they are close and produce compatible results.
+# For strict consistency, pin both to the exact same version.
+#
+# Let's ensure the `ruff` version in `pyproject.toml` (dev dependency) is a specific version
+# rather than just "ruff" to maintain this consistency. This will be done when I
+# update `pyproject.toml` for the mypy script.
+#
+# Creating the file now with the defined content.
+# The `entry: hatch run lint:mypy` assumes `lint:mypy` will be a valid hatch script.
+# I will add this script to `pyproject.toml` in the next tool call.
+#
+# Final check of the content before creating:
+# Yes, this looks good.
+#
+# I'll also add `check-merge-conflict` from pre-commit-hooks.
+#
+# ```yaml
+# minimum_pre_commit_version: '2.20.0'
+# default_language_version:
+#     python: python3 # ensures hooks use python3
+#
+# repos:
+# -   repo: https://github.com/pre-commit/pre-commit-hooks
+#     rev: v4.5.0
+#     hooks:
+#     -   id: trailing-whitespace
+#     -   id: end-of-file-fixer
+#     -   id: check-yaml
+#     -   id: check-json
+#     -   id: check-toml
+#     -   id: check-merge-conflict
+#     -   id: check-added-large-files
+#     -   id: debug-statements
+#     -   id: detect-private-key
+#
+# -   repo: https://github.com/astral-sh/ruff-pre-commit
+#     rev: 'v0.2.2' # Use a recent, specific Ruff version. Align with pyproject.toml if possible.
+#     hooks:
+#     -   id: ruff
+#         name: ruff-lint
+#         args: [--fix, --exit-non-zero-on-fix]
+#         # Consider excluding files if necessary, e.g. files in .venv
+#         # exclude: ^\.venv/
+#     -   id: ruff-format
+#         name: ruff-format
+#         # exclude: ^\.venv/
+#
+# -   repo: local
+#     hooks:
+#     -   id: mypy
+#         name: mypy
+#         entry: hatch run lint:mypy # This script will be added to pyproject.toml's [tool.hatch.envs.lint.scripts]
+#         language: system
+#         'types_or': [python, pyi] # Check .py and .pyi files
+#         pass_filenames: false # Mypy typically runs on configured paths
+#         require_serial: true # Mypy often needs to run serially
+#         # exclude: ^\.venv/
+# ```
+# Added `default_language_version` for python hooks.
+# Added `check-merge-conflict`.
+# Changed `types: [python]` to `types_or: [python, pyi]` for mypy.
+# Added comments about excluding .venv if necessary (though pre-commit usually handles this well by default for staged files).
+# This looks solid.```yaml
+minimum_pre_commit_version: '2.20.0'
+default_language_version:
+    python: python3 # ensures hooks use python3
+
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-json
+    -   id: check-toml
+    -   id: check-merge-conflict
+    -   id: check-added-large-files
+    -   id: debug-statements
+    -   id: detect-private-key
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 'v0.2.2' # Use a recent, specific Ruff version. Align with pyproject.toml if possible.
+    hooks:
+    -   id: ruff
+        name: ruff-lint
+        args: [--fix, --exit-non-zero-on-fix]
+        # Consider excluding files if necessary, e.g. files in .venv
+        # exclude: ^\.venv/
+    -   id: ruff-format
+        name: ruff-format
+        # exclude: ^\.venv/
+
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: hatch run lint:mypy # This script will be added to pyproject.toml's [tool.hatch.envs.lint.scripts]
+        language: system
+        'types_or': [python, pyi] # Check .py and .pyi files
+        pass_filenames: false # Mypy typically runs on configured paths
+        require_serial: true # Mypy often needs to run serially
+        # exclude: ^\.venv/
+```
+</file>
+
+<file path="AGENTS.md">
+# Agent Instructions
+
+This document provides instructions for AI agents working with this codebase.
+
+## Project Overview
+
+This is a Python package managed with Hatch. It includes:
+- Source code in `src/my_package/`
+- Tests in `tests/`
+- Dependency management with `pyproject.toml` (using Hatch and uv for faster environment setup)
+- Linting with Ruff (to be configured)
+- Formatting with Ruff (to be configured, replacing Black)
+- Type checking with Mypy
+- Testing with Pytest (including coverage)
+- Versioning with `hatch-vcs` based on Git tags
+- CI/CD with GitHub Actions
+- Pre-commit hooks for automated checks (to be configured)
+
+## Development Workflow
+
+When making changes, please adhere to the following:
+
+1.  **Understand the requirements:** Ensure you have a clear understanding of the task.
+2.  **Set up the environment:** Use `hatch env create` to set up your development environment. Activate it with `hatch shell`. For faster setup, ensure `uv` is available or set `HATCH_UV=1`.
+3.  **Write tests:** For new features or bug fixes, write tests first or alongside the implementation. Aim for high test coverage.
+4.  **Implement the code:** Write clean, maintainable, and well-documented code in `src/my_package/`.
+5.  **Run linters, formatters, and type checkers:**
+    Use Hatch scripts (to be fully configured with Ruff). For example:
+    ```bash
+    hatch run lint:style  # Will run Ruff format, Ruff lint, Mypy
+    hatch run lint:fmt    # For formatting only (with Ruff)
+    hatch run lint:check  # For linting and type checking only (Ruff, Mypy)
+    ```
+    Ensure all checks pass. (These scripts will be defined in `pyproject.toml`)
+6.  **Run tests:**
+    ```bash
+    hatch run test
+    ```
+    Or, to run tests for specific Python versions defined in `tool.hatch.envs.<env_name>.matrix`:
+    ```bash
+    hatch run python<version>:test
+    ```
+    Ensure all tests pass and coverage targets are met (currently 90%, configured in `pyproject.toml`'s default env scripts).
+7.  **Update documentation:** If your changes affect how the code is used or its external behavior, update `README.md` and any relevant docstrings.
+8.  **Commit messages:** Follow conventional commit message formats if possible, or at least provide a clear and concise summary of the changes. Pre-commit hooks will help ensure code quality before committing.
+
+## Important Files
+
+-   `pyproject.toml`: Project metadata, dependencies, Hatch configurations (environments, build, versioning, tools like Ruff, Mypy).
+-   `src/my_package/`: Main application/library code.
+-   `tests/`: Unit and integration tests.
+-   `.github/workflows/main.yml`: GitHub Actions CI configuration (will be updated to use Hatch).
+-   `README.md`: Project overview, user-facing documentation, and detailed contribution guidelines.
+-   `CONTRIBUTING.md`: High-level guidelines for human contributors, pointing to `README.md` for setup.
+-   `LICENSE`: Project license (Apache 2.0).
+-   `.pre-commit-config.yaml`: Configuration for pre-commit hooks (to be added).
+
+## Specific Instructions
+
+-   **Dependencies:** Add new runtime dependencies to the `project.dependencies` section in `pyproject.toml`. Add development dependencies to `project.optional-dependencies.dev` and ensure they are included in relevant Hatch environments (e.g., `default`, `lint`).
+-   **Type Hinting:** Use type hints for all function signatures and strive for good type coverage. Mypy will be configured to check `src/my_package/`.
+-   **Error Handling:** Implement robust error handling. Use specific exception types where appropriate.
+-   **Modularity:** Design components to be modular and reusable.
+-   **Security:** Be mindful of security best practices, especially if dealing with user input or external services.
+
+By following these guidelines, you will help maintain the quality and consistency of the codebase.
+</file>
+
+<file path="CONTRIBUTING.md">
+# Contributing
+
+Thank you for considering contributing to `my_package`! We welcome all contributions, from bug reports and documentation improvements to new features.
+
+## Getting Started
+
+1.  **Familiarize yourself with the project:** Please read the main `README.md` file thoroughly. It contains:
+    *   An overview of the project and its goals.
+    *   Detailed instructions for setting up your development environment (using Hatch, uv, pre-commit, etc.).
+    *   Guidance on running linters, formatters, type checkers, and tests.
+    *   Information about our versioning and release process.
+    *   An explanation of the codebase structure.
+
+2.  **Find an issue or suggest an idea:** Check the issue tracker on GitHub for existing bugs, feature requests, or discussions. If you have a new idea or want to work on something not listed, please open an issue first to discuss it with the maintainers.
+
+## Contribution Workflow
+
+1.  **Fork the repository** on GitHub.
+2.  **Clone your fork** locally:
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/my_package.git # TODO: Update this URL
+    cd my_package
+    ```
+3.  **Set up your development environment** by following the instructions in the "For Developers" section of `README.md`. This includes installing Hatch, creating the environment with `hatch env create`, and installing pre-commit hooks with `pre-commit install`.
+4.  **Create a new branch** for your changes:
+    ```bash
+    git checkout -b your-descriptive-branch-name
+    ```
+5.  **Make your changes.** Ensure you write clean, well-documented, and well-tested code.
+6.  **Run all quality checks** as described in the `README.md` (e.g., `hatch run lint:style`, `hatch run test`). Pre-commit hooks will help, but a full manual check is also recommended.
+7.  **Commit your changes** with clear and concise commit messages. Consider following conventional commit formats if you are familiar with them.
+    ```bash
+    git commit -m "feat: Add new feature X" -m "Detailed description of changes."
+    ```
+8.  **Push your branch** to your fork:
+    ```bash
+    git push origin your-descriptive-branch-name
+    ```
+9.  **Open a Pull Request (PR)** against the `main` branch of the original `my_package` repository.
+    *   Provide a clear title and description for your PR.
+    *   Link to any relevant issues.
+    *   Explain your changes and why they are needed.
+
+## Code of Conduct
+
+This project and everyone participating in it is governed by a Code of Conduct. (TODO: Create and link to a `CODE_OF_CONDUCT.md` file if one is desired. If not, this section can be removed or rephrased). By participating, you are expected to uphold this code. Please report unacceptable behavior.
+
+## Reporting Bugs
+
+If you encounter a bug, please open an issue on GitHub. Include:
+*   A clear and descriptive title.
+*   Steps to reproduce the bug.
+*   What you expected to happen.
+*   What actually happened (including any error messages or tracebacks).
+*   Your environment (e.g., Python version, OS, `my_package` version, Hatch version).
+
+## Suggesting Enhancements
+
+If you have an idea for an enhancement, please open an issue on GitHub. Provide:
+*   A clear and descriptive title.
+*   A detailed explanation of the proposed enhancement.
+*   The motivation or use case for this enhancement.
+*   Any potential drawbacks or alternative solutions.
+
+We appreciate your contributions to making `my_package` better!
+</file>
+
+<file path="LICENSE">
+Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+   1. Definitions.
+
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
+
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
+
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
+
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
+
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
+
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
+
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work
+      (an example is provided in the Appendix below).
+
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
+
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
+
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
+
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
+
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
+
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
+
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
+
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
+
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
+
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
+
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
+
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
+
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or consequential damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
+
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
+
+   END OF TERMS AND CONDITIONS
+
+   APPENDIX: How to apply the Apache License to your work.
+
+      To apply the Apache License to your work, attach the following
+      boilerplate notice, with the fields enclosed by brackets "[]"
+      replaced with your own identifying information. (Don't include
+      the brackets!)  The text should be enclosed in the appropriate
+      comment syntax for the file format. We also recommend that a
+      file or class name and description of purpose be included on the
+      same "printed page" as the copyright notice for easier
+      identification within third-party archives.
+
+   Copyright [yyyy] [name of copyright owner]
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+</file>
+
+<file path="pyproject.toml">
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "my_package"
+# Version will be managed by hatch-vcs later
+dynamic = ["version"]
+authors = [
+  { name="Jules", email="jules@example.com" },
+]
+description = "A small example package"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/your-username/my_package" # TODO: Update this URL
+"Bug Tracker" = "https://github.com/your-username/my_package/issues" # TODO: Update this URL
+"Repository" = "https://github.com/your-username/my_package" # TODO: Update this URL
+
+[project.optional-dependencies]
+dev = [
+    "uv", # For fast dependency management
+    "ruff==0.2.2", # For linting and formatting, pinned version
+    "pytest",
+    "pytest-cov", # For coverage
+    "mypy", # For type checking
+    "hatch-vcs", # For versioning
+    "pre-commit", # For commit hooks
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/.gitignore",
+  "/tests",
+  "/*.ini" # pytest.ini will be moved or settings integrated
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/my_package"]
+
+[tool.hatch.envs.default]
+python = "3.10" # Default python for 'hatch shell'
+dependencies = [
+  "pytest",
+  "pytest-cov",
+  "mypy", # Mypy needed for tests if type checking is part of default checks
+  "ruff", # Ruff needed for linting/formatting if part of default checks
+]
+scripts = { test = "pytest --cov=src/my_package --cov-report=html --cov-report=xml --cov-fail-under=90 tests/" }
+
+[tool.hatch.envs.lint]
+detached = true # Run in a separate environment, not inheriting from default
+dependencies = [
+  "ruff",
+  "mypy",
+]
+scripts = {
+  check = [
+    "ruff check .",
+    "mypy src/my_package/ tests/",
+  ],
+  fmt = [
+    "ruff format .",
+    "ruff check . --fix", # Apply auto-fixes
+  ],
+  style = [ # Comprehensive check and fix
+    "ruff format .",
+    "ruff check . --fix",
+    "mypy src/my_package/ tests/",
+  ],
+  # Specific script for pre-commit mypy hook
+  mypy = "mypy src/my_package/ tests/"
+}
+
+[tool.ruff]
+line-length = 88
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort
+    "C90", # mccabe complexity
+    "N",  # pep8-naming
+    "UP", # pyupgrade
+    "ANN", # flake8-annotations (basic, configure further if needed)
+    "S",  # flake8-bandit (security)
+    "BLE", # flake8-blind-except
+    "B", # flake8-bugbear
+    "A", # flake8-builtins
+    "COM", # flake8-commas
+    "ISC", # flake8-implicit-str-concat
+    "T20", # flake8-print
+    "PYI", # flake8-pyi
+    "PT",  # flake8-pytest-style
+    "RET", # flake8-return
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+    "ARG", # flake8-unused-arguments
+    "RUF", # Ruff-specific rules
+]
+ignore = ["E501"] # Handled by formatter (line length)
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["my_package"]
+
+[tool.ruff.lint.flake8-annotations]
+mypy-init-return = true
+suppress-dummy-args = true
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true # Start with this, can be refined
+# More strict options can be added later:
+# disallow_untyped_defs = true
+# disallow_any_unimported = true
+# no_implicit_optional = true
+# check_untyped_defs = true
+# disallow_incomplete_defs = true
+
+[tool.hatch.envs.uv]
+# Example of using uv for faster environment setup
+dependencies = [
+  "uv",
+]
+# This environment shows how to use uv, actual usage will be via hatch's uv support
+# which is typically enabled globally or via HATCH_UV=1 environment variable.
+
+[tool.hatch.envs.docs]
+dependencies = [
+  "sphinx", # Example, if Sphinx is chosen for docs later
+]
+
+[tool.hatch.envs.build]
+dependencies = [
+  "hatchling",
+  "build",
+]
+scripts = { "build" = "python -m build" }
+</file>
+
+<file path="README.md">
+# My Package
+
+`my_package` is a Python project template showcasing a modern development setup using best-in-class tools for dependency management, linting, formatting, testing, and versioning.
+
+## Rationale for Tooling Choices
+
+This project uses a curated set of tools to ensure a high-quality, maintainable, and efficient development experience:
+
+*   **[Hatch](https://hatch.pypa.io/):** A modern, extensible Python project manager. It handles dependency management, virtual environments, building packages, and running scripts.
+*   **[uv](https://github.com/astral-sh/uv):** An extremely fast Python package installer and resolver, written in Rust. Hatch can be configured to use `uv` for significantly faster environment setup and dependency installation.
+*   **[Ruff](https://github.com/astral-sh/ruff):** An extremely fast Python linter and formatter, written in Rust. It can replace Flake8, isort, Black, and many other tools, providing a unified and very performant experience.
+*   **[Mypy](http://mypy-lang.org/):** A static type checker for Python. It helps catch type errors before runtime, improving code reliability.
+*   **[Pytest](https://docs.pytest.org/):** A mature and feature-rich testing framework that makes writing tests simple and scalable. Includes support for coverage reporting.
+*   **[hatch-vcs](https://github.com/ofek/hatch-vcs):** A Hatch plugin for managing package versions automatically based on Git tags. This simplifies versioning and ensures PEP 440 compliance.
+*   **[pre-commit](https://pre-commit.com/):** A framework for managing and maintaining multi-language pre-commit hooks. It helps enforce code quality standards automatically before code is committed.
+*   **GitHub Actions:** For continuous integration (CI) to automatically run tests, linters, and type checkers on every push and pull request.
+
+## Features
+
+*   Modern Python packaging with `pyproject.toml`.
+*   Project management with Hatch.
+*   Fast dependency resolution and installation with `uv` (via Hatch).
+*   Comprehensive linting and formatting with Ruff.
+*   Static type checking with Mypy.
+*   Automated testing with Pytest and code coverage.
+*   Automatic versioning based on Git tags using `hatch-vcs`.
+*   Pre-commit hooks for automated quality checks.
+*   CI setup with GitHub Actions.
+*   Source code located in `src/my_package/`.
+*   Tests located in `tests/`.
+
+## Installation
+
+### For Users
+
+To install `my_package` as a library in your project:
+
+```bash
+pip install my_package
+```
+(Once the package is published to PyPI. Replace `my_package` with the actual name if different.)
+
+### For Developers
+
+To set up `my_package` for development:
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-username/my_package.git # TODO: Update this URL
+    cd my_package
+    ```
+
+2.  **Install Hatch:**
+    It's recommended to install Hatch using `pipx` for global availability without polluting Python environments:
+    ```bash
+    pipx install hatch
+    ```
+    If you don't have `pipx`, install it first (e.g., `python -m pip install --user pipx`).
+
+3.  **Optional: Install uv for faster Hatch operations:**
+    For significantly faster environment creation and dependency management with Hatch, install `uv`:
+    ```bash
+    pipx install uv
+    ```
+    Then, configure Hatch to use it (this can also be done by setting the `HATCH_UV=1` environment variable):
+    ```bash
+    hatch config set dirs.env.virtual.uv $(command -v uv)
+    ```
+    Or, if `uv` is in your PATH, Hatch might pick it up automatically if `HATCH_UV` is set or `uv` support is enabled by default in future Hatch versions.
+
+4.  **Create the development environment:**
+    Hatch will create and manage virtual environments for the project.
+    ```bash
+    hatch env create
+    ```
+    This command sets up an environment (by default named `default`) with all runtime and development dependencies specified in `pyproject.toml`.
+
+5.  **Activate the development environment:**
+    To activate the environment and use the installed tools:
+    ```bash
+    hatch shell
+    ```
+    You are now inside the project's virtual environment.
+
+6.  **Install pre-commit hooks:**
+    To ensure code quality checks are run automatically before each commit:
+    ```bash
+    pre-commit install
+    ```
+
+## Usage
+
+The main functionality is currently provided by the `hello()` and `add()` functions in `my_package.main`.
+
+```python
+from my_package.main import hello, add
+
+print(hello("Developer"))
+# Output: Hello, Developer!
+
+result = add(5, 3)
+print(f"5 + 3 = {result}")
+# Output: 5 + 3 = 8
+```
+
+## Development Workflow
+
+This section details how to work on the project, run checks, and manage versions.
+
+### Directory Structure
+
+*   `src/my_package/`: Contains the main source code for the package.
+*   `tests/`: Contains all automated tests.
+*   `pyproject.toml`: The heart of the project, defining metadata, dependencies, and tool configurations for Hatch, Ruff, Mypy, etc.
+*   `.github/workflows/`: Contains GitHub Actions CI configurations.
+*   `.pre-commit-config.yaml`: Configuration for pre-commit hooks.
+
+### Running Linters, Formatters, and Type Checkers
+
+We use Hatch scripts to manage quality assurance tasks. These are defined in the `[tool.hatch.envs.lint.scripts]` section of `pyproject.toml`.
+
+*   **To format code and apply auto-fixes (Ruff):**
+    ```bash
+    hatch run lint:fmt
+    ```
+    This runs `ruff format .` and `ruff check . --fix`.
+
+*   **To check for linting errors (Ruff) and type errors (Mypy):**
+    ```bash
+    hatch run lint:check
+    ```
+    This runs `ruff check .` and `mypy src/my_package/ tests/`.
+
+*   **To run Mypy type checking separately:**
+    ```bash
+    hatch run lint:mypy
+    ```
+
+*   **To run all formatting, linting, and type checking:**
+    ```bash
+    hatch run lint:style
+    ```
+
+Pre-commit hooks will also run many of these checks automatically when you commit changes.
+
+### Running Tests
+
+Tests are written using Pytest and are located in the `tests/` directory.
+
+*   **To run all tests with coverage:**
+    ```bash
+    hatch run test  # 'test' is an alias for 'default:test'
+    ```
+    Or explicitly:
+    ```bash
+    hatch run default:test
+    ```
+    This command is defined in `[tool.hatch.envs.default.scripts]` in `pyproject.toml` and includes options for coverage reporting (`--cov=src/my_package --cov-report=html --cov-report=xml`) and failing if coverage is below 90% (`--cov-fail-under=90`).
+
+*   **To view the HTML coverage report:**
+    After running tests, open `htmlcov/index.html` in your browser.
+
+### Versioning and Releases
+
+This project uses `hatch-vcs` for automatic versioning based on Git tags.
+
+*   **How it works:** The version is dynamically determined from the latest Git tag.
+    *   If the current commit is tagged (e.g., `v0.1.0`), that tag is the version.
+    *   If there are commits since the last tag, a development version string is generated (e.g., `v0.1.0.post1.dev5+g<hash>`).
+*   **Making a release:**
+    1.  Ensure your `main` branch is up-to-date and all changes are committed.
+    2.  Tag the commit for the release:
+        ```bash
+        git tag vX.Y.Z  # Replace X.Y.Z with the semantic version (e.g., v0.1.0)
+        ```
+    3.  Push the tags to the remote repository:
+        ```bash
+        git push --tags
+        ```
+    4.  When you build the package (see below), `hatch-vcs` will use this tag as the version.
+    A GitHub Action could be set up to automatically build and publish to PyPI when a new tag matching a certain pattern (e.g., `v*.*.*`) is pushed.
+
+### Building the Package
+
+Hatch is used to build the source distribution (sdist) and wheel.
+
+*   **To build the package:**
+    ```bash
+    hatch build
+    ```
+    This will create the `sdist` and `wheel` files in the `dist/` directory. These files can then be uploaded to PyPI or another package index.
+
+### Codebase Structure Explanation
+
+*   **`src/my_package/__init__.py`**: Makes `my_package` a Python package. Can also export public symbols.
+*   **`src/my_package/main.py`**: Contains the core logic of the package (currently, example functions).
+*   **`tests/test_main.py`**: Contains tests for `main.py`. Tests should mirror the structure of the source code.
+
+(This section can be expanded as the codebase grows.)
+
+## Contributing
+
+We welcome contributions! Please follow these guidelines:
+
+1.  Fork the repository on GitHub.
+2.  Clone your fork locally.
+3.  Set up the development environment as described in the "For Developers" installation section (including `pre-commit install`).
+4.  Create a new branch for your feature or bug fix: `git checkout -b my-feature-branch`.
+5.  Make your changes. Write clean, well-documented, and well-tested code.
+6.  Ensure all quality checks pass:
+    *   Pre-commit hooks should pass on commit.
+    *   Manually run `hatch run lint:style` and `hatch run test` to be sure.
+7.  Commit your changes with clear and descriptive messages.
+8.  Push your branch to your fork: `git push origin my-feature-branch`.
+9.  Open a pull request against the `main` branch of the original repository. Provide a clear description of your changes.
+
+Please also see the `CONTRIBUTING.md` file for more general contribution etiquette (though most technical details are now in this README).
+
+## License
+
+This project is licensed under the Apache License 2.0. See the `LICENSE` file for details.
+</file>
+
+</files>
