@@ -1,0 +1,86 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mimearchivefs"
+version = "0.1.0"
+description = "A virtual filesystem based on an MHTML-compatible single-file archive format"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+authors = [
+    {name = "MimeArchiveFS Contributors", email = "info@example.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Filesystems",
+]
+dependencies = [
+    "fsspec>=2023.10.0",
+]
+
+[project.optional-dependencies]
+cli = [
+    "rich>=13.0.0",
+    "fire>=0.5.0",
+    "loguru>=0.7.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.5",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+]
+
+[project.scripts]
+mimearchivefs = "mimearchivefs.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/example/mimearchivefs"
+Issues = "https://github.com/example/mimearchivefs/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mimearchivefs"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/mimearchivefs",
+    "tests",
+    "pyproject.toml",
+    "README.md",
+    "LICENSE",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "N", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]  # Allow long lines in tests
+
+[tool.mypy]
+python_version = "3.12"
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "--cov=mimearchivefs" 

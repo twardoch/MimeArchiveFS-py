@@ -1,0 +1,402 @@
+#!/usr/bin/env python3
+# this_file: src/mimearchivefs/archive.py
+
+"""Archive interface for MimeArchiveFS."""
+
+import io
+import os
+import time
+from pathlib import Path
+from typing import Any, BinaryIO, cast
+
+import mimearchivefs.core as core
+import mimearchivefs.utils as utils
+from mimearchivefs.exceptions import FileNotFoundInArchiveError
+
+
+class MimeArchiveInfo:
+    """Class for storing information about a file in the MimeArchive."""
+
+    def __init__(
+        self,
+        filename: str,
+        date_time: tuple[int, int, int, int, int, int] | None = None,
+        compress_type: int = 0,
+        comment: str = "",
+        extra: bytes = b"",
+        create_system: int = 0,
+        file_size: int = 0,
+    ) -> None:
+        """
+        Initialize a MimeArchiveInfo instance.
+
+        Args:
+            filename: Path of the file inside the archive
+            date_time: File timestamp (year, month, day, hour, minute, second)
+            compress_type: Compression method (always 0 for MimeArchive)
+            comment: File comment
+            extra: Extra data
+            create_system: System that created the file
+            file_size: Size of the file in bytes
+        """
+        self.filename = utils.normalize_path(filename)
+        self.file_size = file_size
+
+        # Set date_time to current time if not provided
+        if date_time is None:
+            current_time = time.localtime()
+            self.date_time = (
+                current_time.tm_year,
+                current_time.tm_mon,
+                current_time.tm_mday,
+                current_time.tm_hour,
+                current_time.tm_min,
+                current_time.tm_sec,
+            )
+        else:
+            self.date_time = date_time
+
+        # MimeArchive doesn't use compression, but we store this for API compatibility
+        self.compress_type = compress_type
+        self.comment = comment
+        self.extra = extra
+        self.create_system = create_system
+        self.create_version = 20  # Version used to create the file (2.0)
+        self.extract_version = 20  # Version needed to extract the file
+        self.reserved = 0  # Reserved field
+        self.flag_bits = 0  # Flag bits
+        self.volume = 0  # Volume number
+        self.internal_attr = 0  # Internal file attributes
+        self.external_attr = 0  # External file attributes
+        self.header_offset = 0  # Header offset
+        self.CRC = 0  # CRC-32 of the file
+
+    @property
+    def compress_size(self) -> int:
+        """Get the compressed size (same as file_size for MimeArchive)."""
+        return self.file_size
+
+
+class MimeArchive:
+    """
+    Class with interface similar to ZipFile for handling MimeArchive files.
+    """
+
+    def __init__(
+        self,
+        file: str | BinaryIO,
+        mode: str = "r",
+        compression: int = 0,
+        allowZip64: bool = True,
+    ) -> None:
+        """
+        Initialize a MimeArchive instance.
+
+        Args:
+            file: Path to the file or a file-like object
+            mode: File mode ('r' for read, 'w' for write, 'a' for append)
+            compression: Always 0 for MimeArchive (parameter for ZipFile compatibility)
+            allowZip64: Not used, but included for ZipFile compatibility
+        """
+        self.filename = file if isinstance(file, str) else None
+        self.mode = mode
+        self.debug = 0  # Debug level
+        self.comment = b""  # Archive comment
+
+        # Initialize internal state
+        self._files: dict[str, bytes] = {}
+        self._file_info: dict[str, MimeArchiveInfo] = {}
+        self._open_buffers: dict[str, io.BytesIO] = {}
+
+        # Open the file if needed
+        if mode == "r":
+            if isinstance(file, str):
+                self._files = core.parse_mht(file)
+            else:
+                # Convert BinaryIO to IOBase for parse_mht
+                self._files = core.parse_mht(io.BytesIO(file.read()))
+
+            # Create file info objects
+            for path, content in self._files.items():
+                self._file_info[path] = MimeArchiveInfo(
+                    filename=path,
+                    file_size=len(content),
+                )
+        elif mode == "w":
+            # Start with an empty archive
+            pass
+        elif mode == "a":
+            # Append mode, first read the existing content
+            if isinstance(file, str):
+                try:
+                    self._files = core.parse_mht(file)
+                    for path, content in self._files.items():
+                        self._file_info[path] = MimeArchiveInfo(
+                            filename=path,
+                            file_size=len(content),
+                        )
+                except FileNotFoundError:
+                    # File doesn't exist, treat it as write mode
+                    pass
+            else:
+                # Convert BinaryIO to IOBase for parse_mht
+                self._files = core.parse_mht(io.BytesIO(file.read()))
+                for path, content in self._files.items():
+                    self._file_info[path] = MimeArchiveInfo(
+                        filename=path,
+                        file_size=len(content),
+                    )
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
+
+    def getinfo(self, name: str) -> MimeArchiveInfo:
+        """
+        Get information about a file in the archive.
+
+        Args:
+            name: Path of the file inside the archive
+
+        Returns:
+            MimeArchiveInfo object
+
+        Raises:
+            FileNotFoundInArchiveError: If the file is not found in the archive
+        """
+        path = utils.normalize_path(name)
+        if path not in self._file_info:
+            raise FileNotFoundInArchiveError(f"There is no file named '{name}' in the archive")
+        return self._file_info[path]
+
+    def infolist(self) -> list[MimeArchiveInfo]:
+        """
+        Get a list of MimeArchiveInfo objects for all files in the archive.
+
+        Returns:
+            List of MimeArchiveInfo objects
+        """
+        return list(self._file_info.values())
+
+    def namelist(self) -> list[str]:
+        """
+        Get a list of file names in the archive.
+
+        Returns:
+            List of file names
+        """
+        return list(self._files.keys())
+
+    def open(self, name: str, mode: str = "r") -> io.BytesIO:
+        """
+        Open a file in the archive.
+
+        Args:
+            name: Path of the file inside the archive
+            mode: File mode ('r' for read, 'w' for write)
+
+        Returns:
+            File-like object for reading or writing
+
+        Raises:
+            FileNotFoundInArchiveError: If the file is not found and mode is 'r'
+            ValueError: If an unsupported mode is specified
+        """
+        path = utils.normalize_path(name)
+
+        if mode.startswith("r"):
+            if path not in self._files:
+                raise FileNotFoundInArchiveError(f"There is no file named '{name}' in the archive")
+            return io.BytesIO(self._files[path])
+        elif mode.startswith("w"):
+            # Create an empty file for writing
+            buffer = io.BytesIO()
+            self._open_buffers[path] = buffer
+            return buffer
+        else:
+            raise ValueError(f"Unsupported mode: {mode}")
+
+    def read(self, name: str) -> bytes:
+        """
+        Read a file from the archive.
+
+        Args:
+            name: Path of the file inside the archive
+
+        Returns:
+            File contents as bytes
+
+        Raises:
+            FileNotFoundInArchiveError: If the file is not found in the archive
+        """
+        path = utils.normalize_path(name)
+        if path not in self._files:
+            raise FileNotFoundInArchiveError(f"There is no file named '{name}' in the archive")
+        return self._files[path]
+
+    def write(
+        self,
+        filename: str,
+        arcname: str | None = None,
+        compress_type: int | None = None,
+    ) -> None:
+        """
+        Write a file to the archive.
+
+        Args:
+            filename: Path to the file to add
+            arcname: Name to give the file in the archive
+            compress_type: Not used, included for ZipFile compatibility
+
+        Raises:
+            ValueError: If the archive is not in write or append mode
+        """
+        if self.mode not in ("w", "a"):
+            raise ValueError("write() requires mode 'w' or 'a'")
+
+        if arcname is None:
+            arcname = filename
+
+        arcname = utils.normalize_path(arcname)
+
+        # Read the file content
+        with open(filename, "rb") as f:
+            content = f.read()
+
+        # Add to the archive
+        self._files[arcname] = content
+        self._file_info[arcname] = MimeArchiveInfo(
+            filename=arcname,
+            file_size=len(content),
+        )
+
+    def writestr(
+        self,
+        zinfo_or_arcname: str | MimeArchiveInfo,
+        data: str | bytes,
+        compress_type: int | None = None,
+    ) -> None:
+        """
+        Write a string or bytes to the archive.
+
+        Args:
+            zinfo_or_arcname: Archive name or MimeArchiveInfo instance
+            data: Content to write (string or bytes)
+            compress_type: Not used, included for ZipFile compatibility
+
+        Raises:
+            ValueError: If the archive is not in write or append mode
+        """
+        if self.mode not in ("w", "a"):
+            raise ValueError("writestr() requires mode 'w' or 'a'")
+
+        if isinstance(zinfo_or_arcname, MimeArchiveInfo):
+            arcname = zinfo_or_arcname.filename
+            zinfo = zinfo_or_arcname
+        else:
+            arcname = utils.normalize_path(zinfo_or_arcname)
+            zinfo = MimeArchiveInfo(filename=arcname)
+
+        # Convert string to bytes if needed
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+
+        # Update zinfo
+        zinfo.file_size = len(data)
+
+        # Add to the archive
+        self._files[arcname] = data
+        self._file_info[arcname] = zinfo
+
+    def extract(
+        self,
+        member: str | MimeArchiveInfo,
+        path: str | None = None,
+        pwd: bytes | None = None,
+    ) -> str:
+        """
+        Extract a member from the archive to the current working directory.
+
+        Args:
+            member: Member specification (filename or MimeArchiveInfo instance)
+            path: Directory to extract to (default is current directory)
+            pwd: Not used, included for ZipFile compatibility
+
+        Returns:
+            Path to the extracted file
+
+        Raises:
+            FileNotFoundInArchiveError: If the member is not found in the archive
+        """
+        if isinstance(member, MimeArchiveInfo):
+            name = member.filename
+        else:
+            name = member
+
+        # Normalize path
+        name = utils.normalize_path(name)
+
+        # Check if the file exists in the archive
+        if name not in self._files:
+            raise FileNotFoundInArchiveError(f"There is no file named '{name}' in the archive")
+
+        # Create directory structure
+        if path is None:
+            path = os.getcwd()
+
+        # Create target path object
+        target_path = Path(path) / name
+
+        # Ensure parent directory exists
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write the file
+        target_path.write_bytes(self._files[name])
+
+        return str(target_path)
+
+    def extractall(
+        self,
+        path: str | None = None,
+        members: list[str] | None = None,
+        pwd: bytes | None = None,
+    ) -> None:
+        """
+        Extract all members from the archive to the current working directory.
+
+        Args:
+            path: Directory to extract to (default is current directory)
+            members: List of members to extract (default is all)
+            pwd: Not used, included for ZipFile compatibility
+        """
+        if members is None:
+            members = self.namelist()
+        elif isinstance(members[0], MimeArchiveInfo) if members else False:
+            members = [cast(MimeArchiveInfo, m).filename for m in members]
+
+        for name in members:
+            self.extract(name, path, pwd)
+
+    def close(self) -> None:
+        """
+        Close the archive, writing any modified data to the original file.
+        """
+        if self.mode in ("w", "a") and self.filename is not None:
+            # Convert bytes to strings where possible for readability
+            file_data: dict[str, str | bytes] = {}
+            for path, content in self._files.items():
+                file_data[path] = content
+            core.write_mht(self.filename, file_data)
+
+    def __enter__(self) -> "MimeArchive":
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Context manager exit."""
+        self.close()
+
+    def printdir(self) -> None:
+        """Print a table of contents for the archive."""
+        print("File Name                                             Modified             Size")
+        for zinfo in self.infolist():
+            date = "%d-%02d-%02d %02d:%02d:%02d" % zinfo.date_time[:6]
+            print(f"{zinfo.filename:51} {date} {zinfo.file_size:12d}")

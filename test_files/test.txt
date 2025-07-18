@@ -1,0 +1,1 @@
+Hello, world! UTF-8 content with special chars: åéîøü
